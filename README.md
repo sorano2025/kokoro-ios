@@ -65,6 +65,14 @@ let audioBuffer = try tts.generateAudio(voice: voiceEmbedding, language: .enUS, 
 
 You'll need to provide your own Kokoro TTS model file due to its large size as well as voice style. Please see example project [Kokoro Test App](https://github.com/mlalma/KokoroTestApp) how they can be included as a part of the application package.
 
+## Example App: Jarvis Client
+
+[`JarvisClient/`](JarvisClient/) is a full SwiftUI iOS app built on top of this package. It pairs
+with [OpenJarvis](https://github.com/open-jarvis/OpenJarvis) running on a Mac (a local LLM served
+over Wi-Fi) to act as a fully on-device voice front-end: on-device speech recognition for input,
+and this package's Kokoro TTS engine for spoken replies. See
+[`JarvisClient/README.md`](JarvisClient/README.md) for setup instructions.
+
 ## Dependencies
 
 This package depends on:

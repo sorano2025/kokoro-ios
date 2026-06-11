@@ -1,0 +1,65 @@
+name: JarvisClient
+options:
+  bundleIdPrefix: com.kokoroswift.jarvis
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+
+configs:
+  Debug: debug
+  Release: release
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+
+packages:
+  KokoroSwift:
+    path: ..
+  MLXUtilsLibrary:
+    url: https://github.com/mlalma/MLXUtilsLibrary.git
+    from: "0.0.6"
+  MLXSwift:
+    url: https://github.com/ml-explore/mlx-swift.git
+    from: "0.30.0"
+
+targets:
+  JarvisClient:
+    type: application
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: Sources/JarvisClient
+      - path: Resources
+    info:
+      path: Sources/JarvisClient/Info.plist
+      properties:
+        CFBundleDisplayName: Jarvis
+        UILaunchScreen: {}
+        NSMicrophoneUsageDescription: "Jarvis listens to your voice so you can talk to your assistant hands-free."
+        NSSpeechRecognitionUsageDescription: "Jarvis transcribes your speech on-device to send your requests to OpenJarvis."
+        NSLocalNetworkUsageDescription: "Jarvis connects to OpenJarvis running on your Mac over your local Wi-Fi network."
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kokoroswift.jarvisclient
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    dependencies:
+      - package: KokoroSwift
+        product: KokoroSwift
+      - package: MLXUtilsLibrary
+        product: MLXUtilsLibrary
+      - package: MLXSwift
+        product: MLX
+      - package: MLXSwift
+        product: MLXNN
