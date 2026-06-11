@@ -26,8 +26,15 @@ OpenJarvis is a separate, Mac/Linux/Windows desktop project (Apache 2.0,
 Stanford Hazy Research). Install it with the one-command installer:
 
 ```bash
-curl -fsSL https://open-jarvis.github.io/OpenJarvis/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/open-jarvis/OpenJarvis/main/scripts/install/install.sh | bash
 ```
+
+> The project's docs also advertise
+> `https://open-jarvis.github.io/OpenJarvis/install.sh` as a shorter URL for
+> the same script, but that GitHub Pages site currently 404s. The
+> `raw.githubusercontent.com` URL above points at the same canonical script
+> (`scripts/install/install.sh` in the repo) and works today. If the Pages
+> URL starts working for you, both are equivalent.
 
 This installs `uv`, a Python virtual environment, Ollama, and a starter
 model (~3 minutes on broadband). Verify it worked:
