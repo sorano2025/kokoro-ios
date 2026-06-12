@@ -42,7 +42,7 @@ final class ConversationViewModel: ObservableObject {
 
     let history = [ChatMessage(role: .system, content: settings.systemPrompt)]
       + messages.filter { $0.id != assistantID }
-    let client = OpenJarvisClient(rootURL: baseURL)
+    let client = OpenJarvisClient(rootURL: baseURL, apiKey: settings.apiKey)
     let model = settings.modelName
     let voiceName = settings.selectedVoice
     let speed = Float(settings.speechRate)

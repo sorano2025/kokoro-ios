@@ -17,6 +17,7 @@ final class AppSettings: ObservableObject {
   private enum Keys {
     static let serverHost = "jarvis.serverHost"
     static let serverPort = "jarvis.serverPort"
+    static let apiKey = "jarvis.apiKey"
     static let modelName = "jarvis.modelName"
     static let systemPrompt = "jarvis.systemPrompt"
     static let selectedVoice = "jarvis.selectedVoice"
@@ -34,6 +35,14 @@ final class AppSettings: ObservableObject {
   /// Port OpenJarvis is serving on (default 8000).
   @Published var serverPort: Int {
     didSet { defaults.set(serverPort, forKey: Keys.serverPort) }
+  }
+
+  /// API key for OpenJarvis's `/v1/*` routes, sent as `Authorization: Bearer <key>`.
+  /// Required whenever `jarvis serve` is bound to a non-loopback host (e.g.
+  /// `--host 0.0.0.0`), which is the case for this app. Generate one on the
+  /// Mac with `jarvis auth create-key`.
+  @Published var apiKey: String {
+    didSet { defaults.set(apiKey, forKey: Keys.apiKey) }
   }
 
   /// Model identifier passed to `/v1/chat/completions`, e.g. "qwen3:8b".
@@ -64,6 +73,7 @@ final class AppSettings: ObservableObject {
   init() {
     serverHost = defaults.string(forKey: Keys.serverHost) ?? ""
     serverPort = defaults.object(forKey: Keys.serverPort) as? Int ?? 8000
+    apiKey = defaults.string(forKey: Keys.apiKey) ?? ""
     modelName = defaults.string(forKey: Keys.modelName) ?? "qwen3:8b"
     systemPrompt = defaults.string(forKey: Keys.systemPrompt) ?? AppSettings.defaultSystemPrompt
     selectedVoice = defaults.string(forKey: Keys.selectedVoice) ?? "af_heart"

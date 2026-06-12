@@ -27,6 +27,12 @@ struct OpenJarvisClient {
   /// Root server URL, e.g. `http://192.168.1.42:8000` (no trailing path).
   let rootURL: URL
 
+  /// API key sent as `Authorization: Bearer <apiKey>` on `/v1/*` routes.
+  /// OpenJarvis requires this whenever `jarvis serve` is bound to a
+  /// non-loopback host (generate one with `jarvis auth create-key`).
+  /// `/health` doesn't require it. May be empty.
+  var apiKey: String = ""
+
   private struct OpenAIMessage: Encodable {
     let role: String
     let content: String
@@ -61,12 +67,19 @@ struct OpenJarvisClient {
 
   /// Model identifiers reported by `/v1/models`.
   func availableModels() async throws -> [String] {
-    let url = rootURL.appendingPathComponent("v1/models")
-    let (data, response) = try await URLSession.shared.data(from: url)
+    var request = URLRequest(url: rootURL.appendingPathComponent("v1/models"))
+    applyAuth(to: &request)
+    let (data, response) = try await URLSession.shared.data(for: request)
     guard let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode else {
       throw OpenJarvisError.http((response as? HTTPURLResponse)?.statusCode ?? -1)
     }
     return try JSONDecoder().decode(ModelsResponse.self, from: data).data.map(\.id)
+  }
+
+  /// Adds the `Authorization: Bearer <apiKey>` header if an API key is set.
+  private func applyAuth(to request: inout URLRequest) {
+    guard !apiKey.isEmpty else { return }
+    request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
   }
 
   /// Streams an assistant reply for `messages`, yielding text deltas as they arrive.
@@ -77,6 +90,7 @@ struct OpenJarvisClient {
           var request = URLRequest(url: rootURL.appendingPathComponent("v1/chat/completions"))
           request.httpMethod = "POST"
           request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+          applyAuth(to: &request)
           request.httpBody = try JSONEncoder().encode(
             ChatCompletionRequest(
               model: model,

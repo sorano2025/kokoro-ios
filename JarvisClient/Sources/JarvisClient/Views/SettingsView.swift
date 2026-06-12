@@ -21,6 +21,9 @@ struct SettingsView: View {
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
           Stepper("Port: \(settings.serverPort)", value: $settings.serverPort, in: 1...65535)
+          SecureField("API key (oj_sk_...)", text: $settings.apiKey)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
           TextField("Model name, e.g. qwen3:8b", text: $settings.modelName)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
@@ -33,7 +36,7 @@ struct SettingsView: View {
         } header: {
           Text("OpenJarvis Server")
         } footer: {
-          Text("Run `jarvis serve --host 0.0.0.0 --port 8000` on your Mac, then enter its local network IP address here.")
+          Text("Run `jarvis serve --host 0.0.0.0 --port 8000` on your Mac, enter its local network IP address here, and paste the key from `jarvis auth create-key`.")
         }
 
         Section("Voice") {
@@ -84,10 +87,20 @@ struct SettingsView: View {
     }
     connectionStatus = "Checking…"
     Task {
-      let client = OpenJarvisClient(rootURL: baseURL)
+      let client = OpenJarvisClient(rootURL: baseURL, apiKey: settings.apiKey)
       do {
         let healthy = try await client.checkHealth()
-        connectionStatus = healthy ? "Connected to OpenJarvis" : "Server responded, but /health didn't return 200."
+        guard healthy else {
+          connectionStatus = "Server responded, but /health didn't return 200."
+          return
+        }
+        // /v1/models requires the API key, so this also validates it.
+        let models = try await client.availableModels()
+        connectionStatus = models.isEmpty
+          ? "Connected to OpenJarvis, but it reported no models."
+          : "Connected to OpenJarvis. Models: \(models.joined(separator: ", "))"
+      } catch OpenJarvisError.http(401) {
+        connectionStatus = "Connected, but the API key is missing or incorrect. Run `jarvis auth create-key` on your Mac and paste it here."
       } catch {
         connectionStatus = error.localizedDescription
       }

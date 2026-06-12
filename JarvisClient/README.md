@@ -43,22 +43,56 @@ model (~3 minutes on broadband). Verify it worked:
 jarvis doctor
 ```
 
+### Install the API server extra
+
+`jarvis serve` needs FastAPI/uvicorn, which the base install doesn't include.
+Install them into the same venv the installer created:
+
+```bash
+cd ~/.openjarvis/src
+uv pip install --python ~/.openjarvis/.venv/bin/python -e ".[server]"
+```
+
+(If you used a custom `OPENJARVIS_HOME`, substitute it for `~/.openjarvis`.)
+
+### Generate an API key
+
+`jarvis serve` refuses to bind to a non-`localhost` address (like
+`0.0.0.0`, which your iPhone needs) unless an API key is configured:
+
+```bash
+jarvis auth create-key
+```
+
+This prints something like `API key generated: oj_sk_...` and stores it in
+`~/.openjarvis/config.toml` under `[server.auth]`. Copy this key — you'll
+paste it into the iOS app's Settings as the **API key**.
+
+### Pick a model
+
+`jarvis doctor` lists the Ollama models you already have (e.g.
+`llama3.2:1b`, `phi4-mini:latest`, `qwen2.5-coder:7b`). Use one of those for
+`--model` below, or pull a new one first with `ollama pull qwen3:8b`.
+
 ### Start the API server
 
 By default `jarvis serve` only listens on `localhost`. To let your iPhone
 connect, bind it to all interfaces:
 
 ```bash
-jarvis serve --host 0.0.0.0 --port 8000 --engine ollama --model qwen3:8b --agent orchestrator
+jarvis serve --host 0.0.0.0 --port 8000 --engine ollama --model qwen2.5-coder:7b --agent orchestrator
 ```
 
 Leave this running. It exposes an OpenAI-compatible API:
 
-| Endpoint | Purpose |
-|---|---|
-| `GET /health` | Health check |
-| `GET /v1/models` | List models |
-| `POST /v1/chat/completions` | Chat (streaming) |
+| Endpoint | Purpose | Auth |
+|---|---|---|
+| `GET /health` | Health check | none |
+| `GET /v1/models` | List models | `Authorization: Bearer <api key>` |
+| `POST /v1/chat/completions` | Chat (streaming) | `Authorization: Bearer <api key>` |
+
+The iOS app sends the `Authorization` header automatically once you've
+entered the API key in Settings.
 
 ### Find your Mac's local IP address
 
@@ -163,8 +197,10 @@ Settings fills in with the voices you included.
 - Or type a message and hit send.
 - Replies stream in from OpenJarvis and are spoken aloud sentence-by-sentence
   via Kokoro as they arrive.
-- **Settings** (gear icon): set your Mac's IP/port, the Ollama model name,
-  voice, speech rate, and system prompt. **Test Connection** checks `/health`.
+- **Settings** (gear icon): set your Mac's IP/port, the **API key** from
+  `jarvis auth create-key`, the Ollama model name, voice, speech rate, and
+  system prompt. **Test Connection** checks `/health` and `/v1/models`
+  (which also confirms the API key is correct).
 
 ---
 
@@ -183,6 +219,15 @@ Settings fills in with the voices you included.
   `jarvis serve --host 0.0.0.0 ...` is running, your Mac's firewall allows it,
   and both devices are on the same network. Try the IP in a Mac browser first:
   `http://<mac-ip>:8000/health`.
+- **"Server dependencies not installed"**: run
+  `uv pip install --python ~/.openjarvis/.venv/bin/python -e ".[server]"`
+  from `~/.openjarvis/src` (see step 1 above).
+- **`jarvis serve --host 0.0.0.0 ...` exits immediately / "requires
+  OPENJARVIS_API_KEY"**: run `jarvis auth create-key` on your Mac and enter
+  the printed key in the app's Settings → **API key**.
+- **HTTP 401 from the app / "Connected, but the API key is missing or
+  incorrect"**: re-run `jarvis auth create-key` (it overwrites the stored
+  key) and update Settings with the new value.
 - **No voices listed in Settings**: make sure both `kokoro-v1_0.safetensors`
   and `voices.npz` show "File present" in Voice Model Setup.
 - **Replies aren't spoken**: check "Speak responses aloud" is on in Settings
