@@ -32,7 +32,11 @@ final class SpeechRecognizer: ObservableObject {
 
   /// Requests microphone + speech recognition permission. Safe to call repeatedly.
   func requestAuthorization() async -> Bool {
-    let speechStatus = await SFSpeechRecognizer.requestAuthorization()
+    let speechStatus = await withCheckedContinuation { continuation in
+      SFSpeechRecognizer.requestAuthorization { status in
+        continuation.resume(returning: status)
+      }
+    }
     let micGranted = await AVAudioApplication.requestRecordPermission()
     return speechStatus == .authorized && micGranted
   }
