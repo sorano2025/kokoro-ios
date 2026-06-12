@@ -204,14 +204,45 @@ Settings fills in with the voices you included.
 
 ---
 
+## 5. Using Jarvis away from home with Tailscale (optional)
+
+By default, the iPhone and Mac need to be on the same Wi-Fi network. To reach
+your Mac's OpenJarvis server from anywhere (e.g. at work or on cellular)
+without exposing it to the public internet, use
+[Tailscale](https://tailscale.com) — a free private WireGuard network.
+
+1. Install Tailscale on your Mac (`brew install --cask tailscale` or the Mac
+   App Store) and on your iPhone (App Store), and sign in to the same
+   Tailscale account on both.
+2. On your Mac, find its Tailscale MagicDNS name:
+   ```bash
+   tailscale status
+   ```
+   It looks like `mymac.tailxxxxx.ts.net`.
+3. Keep `jarvis serve --host 0.0.0.0 --port 8000 ...` running, and make sure
+   your Mac doesn't go to sleep (e.g. run it under `caffeinate -s`, or disable
+   sleep in System Settings → Lock Screen/Energy).
+4. In the iOS app's **Settings**, enter the Tailscale MagicDNS name (without
+   `http://`) as the **Server** field instead of your LAN IP. Port, API key,
+   and model stay the same.
+
+This works because `Info.plist` adds an ATS exception allowing plain HTTP to
+`*.ts.net` addresses specifically — Tailscale's MagicDNS names aren't covered
+by iOS's normal "local networking" exception, which only covers private LAN
+IP ranges.
+
+---
+
 ## Permissions & networking notes
 
 - **Microphone** / **Speech Recognition**: requested the first time you tap
   the mic button.
 - **Local Network**: iOS will prompt the first time the app tries to reach
   your Mac's IP — allow it.
-- The app talks to OpenJarvis over plain HTTP on your LAN. `Info.plist` sets
-  `NSAllowsLocalNetworking` so this is permitted without HTTPS.
+- The app talks to OpenJarvis over plain HTTP. `Info.plist` sets
+  `NSAllowsLocalNetworking` for LAN addresses, plus an exception for
+  `*.ts.net` (Tailscale MagicDNS) so this is permitted without HTTPS in both
+  cases.
 
 ## Troubleshooting
 

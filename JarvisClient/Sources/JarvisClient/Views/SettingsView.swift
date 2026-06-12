@@ -16,8 +16,7 @@ struct SettingsView: View {
     NavigationStack {
       Form {
         Section {
-          TextField("Mac's IP address, e.g. 192.168.1.42", text: $settings.serverHost)
-            .keyboardType(.numbersAndPunctuation)
+          TextField("Mac's IP address or Tailscale hostname", text: $settings.serverHost)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
           Stepper("Port: \(settings.serverPort)", value: $settings.serverPort, in: 1...65535)
@@ -36,7 +35,7 @@ struct SettingsView: View {
         } header: {
           Text("OpenJarvis Server")
         } footer: {
-          Text("Run `jarvis serve --host 0.0.0.0 --port 8000` on your Mac, enter its local network IP address here, and paste the key from `jarvis auth create-key`.")
+          Text("Run `jarvis serve --host 0.0.0.0 --port 8000` on your Mac, enter its local network IP address here (or a Tailscale hostname like mymac.tailxxxxx.ts.net to connect from outside your home network), and paste the key from `jarvis auth create-key`.")
         }
 
         Section("Voice") {

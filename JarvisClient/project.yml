@@ -45,6 +45,10 @@ targets:
         NSLocalNetworkUsageDescription: "Jarvis connects to OpenJarvis running on your Mac over your local Wi-Fi network."
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+          NSExceptionDomains:
+            ts.net:
+              NSExceptionAllowsInsecureHTTPLoads: true
+              NSIncludesSubdomains: true
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
