@@ -57,6 +57,7 @@ targets:
     dependencies:
       - package: KokoroSwift
         product: KokoroSwift
+        embed: true
       - package: MLXUtilsLibrary
         product: MLXUtilsLibrary
       - package: MLXSwift
