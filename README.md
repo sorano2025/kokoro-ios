@@ -72,6 +72,22 @@ This package depends on:
 - [MisakiSwift](https://github.com/mlalma/MisakiSwift) - G2P processor
 - [MLXUtilsLibrary](https://github.com/mlalma/MLXUtilsLibrary) - Utility library
 
+## Stark — on-device automation server
+
+This repository also carries `Stark`, an automation server that runs inside an
+iOS app: an HTTP control surface on the loopback interface, an MLX-hosted
+language model downloaded on demand, platform connectors, and a review queue
+with rate limits and disclosure defaults. Kokoro is wired in for voice replies.
+
+- Products: `StarkKit` (everything), `StarkCore` (no MLX, fully testable)
+- Docs: [Docs/STARK.md](Docs/STARK.md)
+- Host app: [Examples/StarkApp](Examples/StarkApp)
+
+```swift
+let server = try await Stark.boot()   // server + model runtime + loop
+StarkDashboard(server: server)        // the tiny stark interface
+```
+
 ## License
 
 This project is licensed under MIT License - see the [LICENSE](LICENSE) file for details.
