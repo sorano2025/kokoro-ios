@@ -12,7 +12,7 @@ import StarkCore
 /// Everything MLX-shaped is confined to this file. `mlx-swift-lm` moves fast,
 /// so when its generation API shifts there is exactly one place to follow it,
 /// and the rest of the server keeps compiling.
-public actor MLXLanguageModel: LanguageModel {
+public actor MLXLanguageModel: StarkCore.LanguageModel {
   public private(set) var status = ModelStatus()
   private var container: ModelContainer?
 
@@ -68,27 +68,30 @@ public actor MLXLanguageModel: LanguageModel {
 
   public func generate(messages: [ChatMessage], options: SamplingOptions) async throws -> AsyncThrowingStream<String, Error> {
     guard let container else { throw ModelError.noModelLoaded }
-    let chat: [Chat.Message] = messages.map { message in
-      switch message.role {
-      case .system: .system(message.content)
-      case .user: .user(message.content)
-      case .assistant: .assistant(message.content)
-      }
-    }
-    let parameters = GenerateParameters(
-      maxTokens: options.maxTokens,
-      temperature: options.temperature,
-      topP: options.topP,
-      repetitionPenalty: options.repetitionPenalty
-    )
 
     return AsyncThrowingStream { continuation in
       let task = Task {
         do {
-          _ = try await container.perform { context in
+          // `messages` and `options` are Sendable value types; `Chat.Message`
+          // and `GenerateParameters` are built inside the model's isolation so
+          // nothing non-Sendable crosses the boundary.
+          try await container.perform { context in
+            let chat: [Chat.Message] = messages.map { message in
+              switch message.role {
+              case .system: .system(message.content)
+              case .user: .user(message.content)
+              case .assistant: .assistant(message.content)
+              }
+            }
+            let parameters = GenerateParameters(
+              maxTokens: options.maxTokens,
+              temperature: options.temperature,
+              topP: options.topP,
+              repetitionPenalty: options.repetitionPenalty
+            )
             let input = try await context.processor.prepare(input: UserInput(chat: chat))
             var emitted = ""
-            return try MLXLMCommon.generate(input: input, parameters: parameters, context: context) { tokens in
+            _ = try MLXLMCommon.generate(input: input, parameters: parameters, context: context) { tokens in
               // The callback hands back every token so far; only the tail is
               // new, and detokenising the whole prefix each time is how the
               // decoder keeps multi-token characters intact.
