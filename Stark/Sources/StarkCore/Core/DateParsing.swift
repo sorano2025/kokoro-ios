@@ -6,25 +6,25 @@ import Foundation
 public extension Date {
   /// Parses the timestamp shapes the connected APIs actually emit.
   ///
-  /// Mastodon sends fractional seconds, Discord sends six-digit microseconds
-  /// with an offset, some hosts drop the seconds entirely, and `.iso8601`
-  /// alone rejects two of the three.
+  /// Mastodon sends fractional seconds, Discord sends microseconds with a
+  /// colon-separated offset, some hosts send neither — and one strategy
+  /// rejects two of the three. `Date.ISO8601FormatStyle` is used rather than
+  /// `ISO8601DateFormatter` because the format styles are value types and
+  /// `Sendable`, so they can live in a static without a data race.
   static func starkParse(_ text: String) -> Date? {
-    if let date = fractionalISO.date(from: text) { return date }
-    if let date = plainISO.date(from: text) { return date }
+    for style in isoStyles {
+      if let date = try? style.parse(text) { return date }
+    }
     if let seconds = TimeInterval(text) { return Date(timeIntervalSince1970: seconds) }
     return nil
   }
 
-  private static let fractionalISO: ISO8601DateFormatter = {
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    return formatter
-  }()
-
-  private static let plainISO: ISO8601DateFormatter = {
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime]
-    return formatter
-  }()
+  /// Ordered most-specific first: fractional seconds before whole seconds, and
+  /// both offset spellings ("+0000" and "+00:00").
+  private static let isoStyles: [Date.ISO8601FormatStyle] = [
+    .init(includingFractionalSeconds: true),
+    .init(timeZoneSeparator: .colon, includingFractionalSeconds: true),
+    .init(),
+    .init(timeZoneSeparator: .colon),
+  ]
 }
