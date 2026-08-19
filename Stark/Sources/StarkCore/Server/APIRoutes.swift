@@ -28,7 +28,7 @@ public struct APIRoutes: Sendable {
 
     // MARK: Stats
     router.add("GET", "/api/stats") { request, _ in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       struct Payload: Encodable, Sendable {
         let metrics: MetricsSnapshot
         let model: ModelStatus
@@ -59,14 +59,14 @@ public struct APIRoutes: Sendable {
     }
 
     router.add("GET", "/api/logs") { request, _ in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       return .json(await EventLog.shared.recent(limit: Int(request.query["limit"] ?? "") ?? 150))
     }
 
     // Live tail: log lines pushed as they happen, so the dashboard does not
     // poll a phone that is trying to save battery.
     router.add("GET", "/api/events") { request, _ in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       let source = await EventLog.shared.stream()
       let stream = AsyncStream<String> { continuation in
         let task = Task {
@@ -84,14 +84,14 @@ public struct APIRoutes: Sendable {
 
     // MARK: Config
     router.add("GET", "/api/config") { request, _ in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       var config = await engine.config()
       config.apiToken = "••••"
       return .json(config)
     }
 
     router.add("PATCH", "/api/config") { request, _ in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       struct Patch: Decodable, Sendable {
         var mode: String?
         var tickInterval: TimeInterval?
@@ -116,7 +116,7 @@ public struct APIRoutes: Sendable {
 
     // MARK: Models
     router.add("GET", "/api/models") { request, _ in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       struct Payload: Encodable, Sendable {
         let catalog: [ModelDescriptor]
         let fits: [String]
@@ -130,7 +130,7 @@ public struct APIRoutes: Sendable {
     }
 
     router.add("POST", "/api/models/load") { request, _ in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       struct Body: Decodable, Sendable { let id: String }
       guard let body = try? request.decode(Body.self) else { return .error(400, "expected {\"id\":…}") }
       guard let model = await engine.attachedModel() else { return .error(503, "no model runtime attached") }
@@ -155,19 +155,19 @@ public struct APIRoutes: Sendable {
     }
 
     router.add("POST", "/api/models/unload") { request, _ in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       if let model = await engine.attachedModel() { await model.unload() }
       return .json(await engine.modelStatus())
     }
 
     // MARK: Connections
     router.add("GET", "/api/connections") { request, _ in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       return .json(await engine.connections())
     }
 
     router.add("POST", "/api/connections") { request, _ in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       struct Body: Decodable, Sendable {
         let id: String?
         let kind: PlatformKind
@@ -197,20 +197,20 @@ public struct APIRoutes: Sendable {
     }
 
     router.add("DELETE", "/api/connections/:id") { request, parameters in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       guard let id = parameters["id"] else { return .error(400, "missing id") }
       await engine.removeConnection(id)
       return HTTPResponse(status: 204)
     }
 
     router.add("POST", "/api/connections/:id/verify") { request, parameters in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       guard let id = parameters["id"] else { return .error(400, "missing id") }
       return .json(await engine.verifyConnection(id))
     }
 
     router.add("POST", "/api/connections/:id/toggle") { request, parameters in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       guard let id = parameters["id"], var connection = await engine.connections().first(where: { $0.id == id }) else {
         return .error(404, "unknown connection")
       }
@@ -221,19 +221,19 @@ public struct APIRoutes: Sendable {
 
     // MARK: Products
     router.add("GET", "/api/products") { request, _ in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       return .json(await engine.products())
     }
 
     router.add("POST", "/api/products") { request, _ in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       guard let product = try? request.decode(DigitalProduct.self) else { return .error(400, "bad body") }
       await engine.upsert(product: product)
       return .json(product, status: 201)
     }
 
     router.add("DELETE", "/api/products/:id") { request, parameters in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       guard let id = parameters["id"] else { return .error(400, "missing id") }
       await engine.removeProduct(id)
       return HTTPResponse(status: 204)
@@ -241,7 +241,7 @@ public struct APIRoutes: Sendable {
 
     // MARK: Queue
     router.add("GET", "/api/queue") { request, _ in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       let drafts = await engine.queue.all()
       let filtered = request.query["status"].flatMap(Draft.Status.init(rawValue:)).map { status in
         drafts.filter { $0.status == status }
@@ -250,7 +250,7 @@ public struct APIRoutes: Sendable {
     }
 
     router.add("POST", "/api/queue/:id/approve") { request, parameters in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       guard let id = parameters["id"] else { return .error(400, "missing id") }
       struct Body: Decodable, Sendable { let text: String? }
       let edited = (try? request.decode(Body.self))?.text
@@ -261,7 +261,7 @@ public struct APIRoutes: Sendable {
     }
 
     router.add("POST", "/api/queue/:id/reject") { request, parameters in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       guard let id = parameters["id"] else { return .error(400, "missing id") }
       await engine.reject(draftID: id)
       return HTTPResponse(status: 204)
@@ -269,26 +269,26 @@ public struct APIRoutes: Sendable {
 
     // MARK: Engine control
     router.add("POST", "/api/engine/start") { request, _ in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       await engine.start()
       return .text("started")
     }
 
     router.add("POST", "/api/engine/stop") { request, _ in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       await engine.stop()
       return .text("stopped")
     }
 
     router.add("POST", "/api/run") { request, _ in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       struct Result: Encodable, Sendable { let drafted: Int }
       return .json(Result(drafted: await engine.runOnce()))
     }
 
     // Dry-run a draft against arbitrary text without touching a platform.
     router.add("POST", "/api/draft") { request, _ in
-      guard await authorize(request, engine) else { return .error(401, "bad token") }
+      guard await APIRoutes.authorize(request, engine) else { return .error(401, "bad token") }
       struct Body: Decodable, Sendable { let text: String; let author: String? }
       guard let body = try? request.decode(Body.self) else { return .error(400, "bad body") }
       let item = InboundItem(
@@ -323,9 +323,4 @@ public struct APIRoutes: Sendable {
     for (left, right) in zip(lhs, rhs) { difference |= left ^ right }
     return difference == 0
   }
-}
-
-/// Free function so route closures can call it without capturing `self`.
-private func authorize(_ request: HTTPRequest, _ engine: AutomationEngine) async -> Bool {
-  await APIRoutes.authorize(request, engine)
 }
