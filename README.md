@@ -79,6 +79,10 @@ iOS app: an HTTP control surface on the loopback interface, an MLX-hosted
 language model downloaded on demand, platform connectors, and a review queue
 with rate limits and disclosure defaults. Kokoro is wired in for voice replies.
 
+It is a **separate SwiftPM package** under [`Stark/`](Stark): MisakiSwift pins
+mlx-swift to 0.30.2 while the LLM runtime needs 0.30.3+, so the two cannot share
+a dependency graph. An app links one or the other.
+
 - Products: `StarkKit` (everything), `StarkCore` (no MLX, fully testable)
 - Docs: [Docs/STARK.md](Docs/STARK.md)
 - Host app: [Examples/StarkApp](Examples/StarkApp)

@@ -6,8 +6,9 @@ in Xcode:
 1. **File → New → Project → iOS App**, SwiftUI lifecycle, name it `StarkApp`.
 2. Delete the generated `ContentView.swift` and `…App.swift`, then drag
    `StarkApp.swift` from this folder into the target.
-3. **File → Add Package Dependencies → Add Local…**, pick this repository, and
-   add the **StarkKit** library to the app target.
+3. **File → Add Package Dependencies → Add Local…**, pick the **`Stark`
+   folder** of this repository (not the repository root — Stark is its own
+   package), and add the **StarkKit** library to the app target.
 4. Set the deployment target to **iOS 18.0** and build for a **real device** —
    MLX needs the Apple silicon GPU and does not run in the simulator.
 5. Signing: any personal team works. The keychain is used for platform tokens,
@@ -31,8 +32,8 @@ To drive it from a laptop, flip `loopbackOnly` to `false` in the config file
 address. Do that only on a network you trust — the token is the only thing
 between the server and anyone else on that Wi-Fi.
 
-## Model files for voice replies
+## Voice
 
-`KokoroVoice` needs the Kokoro weights and a voice embedding, exactly as
-[KokoroTestApp](https://github.com/mlalma/KokoroTestApp) sets them up. Text
-replies work without it.
+`SystemVoice` speaks a draft through AVSpeechSynthesizer with no setup. The
+Kokoro implementation in `Examples/KokoroVoice` is higher quality but cannot be
+linked at the same time as the LLM runtime yet — see Docs/STARK.md for why.

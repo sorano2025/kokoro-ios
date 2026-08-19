@@ -1,10 +1,9 @@
-# Builds the package on a macOS runner.
+# Builds both packages in this repository on a macOS runner.
 #
-# The Apple-only halves of this package — Network.framework, Keychain, SwiftUI,
-# MLX — cannot be compiled anywhere else, so this is the only place the whole
-# thing type-checks. macOS runners bill at 10x the minute rate on private
-# repositories, so the triggers are deliberately narrow and the fast signal
-# (StarkCore, which has no dependencies) runs before the slow MLX build.
+# The Apple-only halves — Network.framework, Keychain, SwiftUI, MLX — cannot be
+# compiled anywhere else, so this is the only place either package type-checks.
+# They are separate packages because MisakiSwift pins mlx-swift to 0.30.2 while
+# mlx-swift-lm needs 0.30.3+, so one dependency graph cannot hold both.
 name: swift
 
 on:
@@ -18,7 +17,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  stark:
+    name: Stark (server)
     runs-on: macos-latest
     timeout-minutes: 60
 
@@ -27,7 +27,39 @@ jobs:
 
       - name: Select newest Xcode
         run: |
-          ls -d /Applications/Xcode*.app
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          swift --version
+
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: |
+            Stark/.build
+            ~/Library/Caches/org.swift.swiftpm
+          key: spm-stark-${{ runner.os }}-${{ hashFiles('Stark/Package.swift') }}
+          restore-keys: spm-stark-${{ runner.os }}-
+
+      # StarkCore has no dependencies, so it compiles in seconds and catches
+      # most mistakes before the MLX build is worth waiting for.
+      - name: Build StarkCore
+        run: swift build --package-path Stark --target StarkCore
+
+      - name: Test StarkCore
+        run: swift test --package-path Stark --filter StarkCoreTests
+
+      - name: Build everything
+        run: swift build --package-path Stark
+
+  kokoro:
+    name: KokoroSwift (TTS)
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select newest Xcode
+        run: |
           sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
           swift --version
 
@@ -37,19 +69,8 @@ jobs:
           path: |
             .build
             ~/Library/Caches/org.swift.swiftpm
-          key: spm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
-          restore-keys: spm-${{ runner.os }}-
+          key: spm-kokoro-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: spm-kokoro-${{ runner.os }}-
 
-      - name: Resolve dependencies
-        run: swift package resolve
-
-      # No dependencies, so this compiles in seconds and catches most mistakes
-      # before the MLX build is worth waiting for.
-      - name: Build StarkCore
-        run: swift build --target StarkCore
-
-      - name: Test StarkCore
-        run: swift test --filter StarkCoreTests
-
-      - name: Build everything
+      - name: Build
         run: swift build

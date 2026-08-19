@@ -14,23 +14,40 @@ laptop ─ ─ ─▶│      └─ Router ─ APIRoutes ─┐                
              │      │        └── GuardRails ── Humanizer ── Persona    │
              │      │                                                 │
              │      ├── PlatformConnector × N  ──▶ mastodon/discord/…  │
-             │      └── LanguageModel                                  │
-             │             └─ MLXLanguageModel (MLX, GPU)             │
-             │             └─ KokoroVoice (TTS, this repo)            │
+             │      ├── LanguageModel                                  │
+             │      │      └─ MLXLanguageModel (MLX, GPU)             │
+             │      └── VoiceSynthesizer ── SystemVoice (AVFoundation)│
              └────────────────────────────────────────────────────────┘
 ```
 
 ## Targets
 
+Stark is its own SwiftPM package under `Stark/`, separate from the KokoroSwift
+package at the repository root.
+
 | Target | Depends on | Contains |
 | --- | --- | --- |
-| `StarkCore` | Foundation, Network, Security | server, router, engine, queue, connectors, guardrails, metrics |
-| `StarkLLM` | MLX, mlx-swift-lm, KokoroSwift | model download + generation, voice synthesis |
+| `StarkCore` | Foundation, Network, Security, AVFoundation | server, router, engine, queue, connectors, guardrails, metrics, voice |
+| `StarkLLM` | MLX, mlx-swift-lm | model download + generation |
 | `StarkUI` | StarkCore, SwiftUI | the native dashboard |
 | `StarkKit` | all three | `Stark.boot()`, background refresh |
 
 `StarkCore` deliberately has no MLX dependency: it is the part with the logic
-worth testing, and it compiles and runs its tests anywhere.
+worth testing, and it compiles and runs its tests in seconds.
+
+### Why two packages
+
+`MisakiSwift`, the grapheme-to-phoneme library KokoroSwift needs, pins
+`mlx-swift` to **exactly 0.30.2**. Every `mlx-swift-lm` release that can host a
+language model needs **0.30.3 or newer** (2.29.x wants 0.29.x). No version of
+`mlx-swift` satisfies both, so SwiftPM cannot resolve a graph containing both
+libraries — this is why the repository's own HEAD dropped Misaki when it added
+`mlx-swift-lm`.
+
+Separate packages let each resolve. An app links one or the other: `StarkKit`
+for the server, `KokoroSwift` for TTS. When Misaki loosens its pin (or Kokoro
+moves onto `mlx-swift-lm`), the two collapse back into one package and
+`Examples/KokoroVoice` becomes a real target.
 
 ## The loop
 
@@ -133,9 +150,20 @@ of every one of these platforms and gets the account banned.
 `products.json`, `queue.json`, `metrics.json`. Platform tokens are in the
 keychain (`kSecAttrAccessibleAfterFirstUnlock`), never in those files.
 
+## Voice
+
+`VoiceSynthesizer` renders a draft to an audio file on the device.
+`SystemVoice` implements it with AVSpeechSynthesizer — no dependency, no
+download, available the moment the app launches. `Examples/KokoroVoice` holds
+the higher-quality Kokoro implementation, which conforms to the same protocol
+and drops in once the dependency pins above allow it.
+
+None of the shipped connectors upload media, so audio is a utility rather than
+part of the reply pipeline today.
+
 ## Testing
 
-`swift test --filter StarkCoreTests` covers the parts worth pinning down:
+`swift test --package-path Stark --filter StarkCoreTests` covers the parts worth pinning down:
 request parsing, routing, JSON path extraction, HTML stripping, the humanizer's
 subtractions and every guardrail decision. None of it needs a model, a network
 or a device.
