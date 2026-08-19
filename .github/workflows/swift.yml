@@ -1,0 +1,55 @@
+# Builds the package on a macOS runner.
+#
+# The Apple-only halves of this package — Network.framework, Keychain, SwiftUI,
+# MLX — cannot be compiled anywhere else, so this is the only place the whole
+# thing type-checks. macOS runners bill at 10x the minute rate on private
+# repositories, so the triggers are deliberately narrow and the fast signal
+# (StarkCore, which has no dependencies) runs before the slow MLX build.
+name: swift
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: swift-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select newest Xcode
+        run: |
+          ls -d /Applications/Xcode*.app
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          swift --version
+
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            ~/Library/Caches/org.swift.swiftpm
+          key: spm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Resolve dependencies
+        run: swift package resolve
+
+      # No dependencies, so this compiles in seconds and catches most mistakes
+      # before the MLX build is worth waiting for.
+      - name: Build StarkCore
+        run: swift build --target StarkCore
+
+      - name: Test StarkCore
+        run: swift test --filter StarkCoreTests
+
+      - name: Build everything
+        run: swift build
